@@ -1,0 +1,58 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: azd-ci-templates
+
+steps:
+
+#- template: codecheck.yml@templates
+
+- task: Docker@2
+  inputs:
+    containerRegistry: 'Docker-Hub'
+    repository: 'rkalluru/d51-frontend'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+    tags: '1.0.$(Build.BuildId)'
+
+- task: UniversalPackages@0
+  inputs:
+    command: 'publish'
+    publishDirectory: '$(Build.ArtifactStagingDirectory)'
+    feedsToUsePublish: 'internal'
+    vstsFeedPublish: 'ce99914a-0f7d-4c46-9ccc-e4d025115ea9/aceb203d-03c1-40f9-b6e1-2c1450fcebd6'
+    vstsFeedPackagePublish: 'frontend'
+    versionOption: 'custom'
+    versionPublish: '1.0.$(Build.BuildId)'
+
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      mkdir publish
+      cp -r static/* publish
+      cd publish
+  displayName: Prepare Artifacts
+      
+- task: UniversalPackages@0
+  inputs:
+    command: 'publish'
+    publishDirectory: '$(Build.SourcesDirectory)/publish'
+    feedsToUsePublish: 'internal'
+    vstsFeedPublish: 'ce99914a-0f7d-4c46-9ccc-e4d025115ea9/f0174cff-2623-4600-a29f-0eb8a06b0a0c'
+    vstsFeedPackagePublish: 'frontend'
+    versionOption: 'patch'
+    packagePublishDescription: 'RoboShop Frontend'
+  displayName: Publish Artifacts
